@@ -8,8 +8,16 @@
 
 namespace Config
 {
+    // ========== 路径配置 ==========
+    // 默认问题数据路径，可通过 CMake 变量 QEP_PROBLEM_BASE_PATH 配置
+    // 如果未通过编译宏定义，使用默认值 "../Problems"
+#ifndef QEP_PROBLEM_BASE_PATH
+#define QEP_PROBLEM_BASE_PATH "../Problems"
+#endif
+    inline std::string PROBLEM_BASE_PATH = QEP_PROBLEM_BASE_PATH;
+
     // ========== 日志与调试 ==========
-    inline int LOG_LEVEL = 2;                        // 0=仅输出结果, 1=简洁关键信息, 2=显示求解过程，3=显示文件读取过程
+    inline int LOG_LEVEL = 2;                        // 0=仅输出结果, 1=简洁关键信息, 2=显示求解过程（实时显示还未完善），3=显示文件读取过程
     inline bool ENABLE_MATRIX_PROPERTY_CHECK = false; // 启用矩阵属性检查（定性判断不准确，还未完善）
     inline bool ENABLE_CONDITION_ESTIMATION = true;  // 启用条件数估计 需启用 Pardiso
     inline bool PRINT_EIGENVALUES = false;           // 启用特征值打印，显示求解得到的特征值
@@ -27,20 +35,13 @@ namespace Config
     // 是否启用自适应参数
     inline bool ENABLE_ADAPTIVE_PARAMETERS = false; // 启用自适应参数(未完善 暂时不可以)
 
-    // ncv 基础参数（内部未使用）
-    // inline int NCV_FACTOR_SMALL = 3;  // n < 10000
-    // inline int NCV_FACTOR_MEDIUM = 2; // 10000 ≤ n < 100000
-    // inline int NCV_FACTOR_LARGE = 2;  // n ≥ 100000
-    // inline int NCV_OFFSET = 6;       // ncv = nev * factor + offset
-    // inline int NCV_MAX = 100;        // 提高上限，适应大问题
-
     // ========== 线性求解器基线参数 ==========
     // 迭代法基线（良态时使用）
-    inline double INNER_TOLERANCE = 1e-5;   // 内层容差
-    inline int INNER_MAX_ITERATIONS = 2000; // 内层最大迭代次数
+    inline double INNER_TOLERANCE = 1e-8;   // 内层容差
+    inline int INNER_MAX_ITERATIONS = 1000; // 内层最大迭代次数
     inline int ILUT_FILL_FACTOR = 10;         // ILUT 预条件填充因子，控制非零元素数量，较大值增强预条件但增加内存和计算成本
     inline double ILUT_DROP_TOL = 1e-4;  // ILUT 丢弃容差，控制预条件中小元素的丢弃，较小值增强预条件但增加内存和计算成本
-    inline int GMRES_RESTART = 100;  // GMRES 重启参数，控制 Krylov 子空间的维度，较大值增强收敛性但增加内存和计算成本
+    inline int GMRES_RESTART = 30;  // GMRES 重启参数，控制 Krylov 子空间的维度，较大值增强收敛性但增加内存和计算成本
 
     // ========== 求解器开关 ==========
     inline bool ENABLE_PARDISO = true;       // 直接法，性能优异，适用范围广，但依赖 MKL
@@ -54,14 +55,9 @@ namespace Config
     inline bool AUTO_CONVERT_BINARY = false; // 自动转换文本矩阵为二进制（会检查文件是否存在，如果存在，默认不转换，除非打开覆盖开关）
     inline bool OVERWRITE_BINARY = false;    // 覆盖二进制文件
 
-    // ========== 路径配置 ==========
-    inline std::string PROBLEM_BASE_PATH = "../Problems/";
-
     // ========== 并行环境 ==========
     inline int OMP_NUM_THREADS = 4;
     inline int MKL_NUM_THREADS = 4;
-
-    // 直接法无需内层迭代参数，但可调整外层容差
 
     // ========== 自适应参数策略 ==========
     // 参数配置（不包含自适应），目前仅被自适应参数函数调用

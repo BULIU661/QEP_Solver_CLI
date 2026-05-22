@@ -13,11 +13,14 @@
 #include <iomanip>
 #include <algorithm>
 #include <Eigen/SparseLU>
-#include <Eigen/PardisoSupport>
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/SparseCholesky>
 #include <unsupported/Eigen/IterativeSolvers>
 #include <Spectra/GenEigsSolver.h>
+
+#ifdef EIGEN_PARDISO_SUPPORT
+#include <Eigen/PardisoSupport>
+#endif
 
 namespace QEP
 {
@@ -27,7 +30,9 @@ namespace QEP
     // ----------------------------------------------------------------------------
     using SolverVariant = std::variant<
         std::unique_ptr<Eigen::SparseLU<Eigen::SparseMatrix<double>>>,
+#ifdef EIGEN_PARDISO_SUPPORT
         std::unique_ptr<Eigen::PardisoLU<Eigen::SparseMatrix<double>>>,
+#endif
         std::unique_ptr<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>>,
         std::unique_ptr<Eigen::ConjugateGradient<Eigen::SparseMatrix<double>,
                                                  Eigen::Lower | Eigen::Upper,
@@ -169,7 +174,7 @@ namespace QEP
             }
             
             //------------- 估计S矩阵条件数---------------
-            if (Config::LOG_LEVEL >= 1)
+            if (Config::LOG_LEVEL >= 1 && Config::ENABLE_CONDITION_ESTIMATION)
             {
                 auto t_cond0 = std::chrono::high_resolution_clock::now();
                 condition_number_S = estimateConditionNumber(S_, false);
@@ -225,6 +230,7 @@ namespace QEP
                 solver_ = std::move(lu);
                 break;
             }
+#ifdef EIGEN_PARDISO_SUPPORT
             case LinearSolverType::PardisoLU:
             {
                 auto pardiso = std::make_unique<Eigen::PardisoLU<Eigen::SparseMatrix<double>>>();
@@ -234,6 +240,7 @@ namespace QEP
                 solver_ = std::move(pardiso);
                 break;
             }
+#endif
             case LinearSolverType::SimplicialLLT:
             {
                 auto llt = std::make_unique<Eigen::SimplicialLLT<Eigen::SparseMatrix<double>>>();
@@ -288,11 +295,10 @@ namespace QEP
                 solver_ = std::move(gmres);
                 break;
             }
+            default:
+                throw std::runtime_error("Unsupported solver type (PardisoLU requires MKL)");
             }
         }
-
-        // 可以在次进行矩阵条件数估计，以判断迭代法预处理子效果
-        // estimateAndWarnConditionNumber(S_, true);
 
         // 解线性方程组solver(rhs)
         Eigen::VectorXd solve(const Eigen::VectorXd &rhs) const
@@ -311,7 +317,7 @@ namespace QEP
             Eigen::VectorXd result;
 
             // Check if using iterative solver
-            // 判断是否为迭代求解器 ??? 语法原理？
+            // 判断是否为迭代求解器
             bool is_iterative = std::holds_alternative<
                                     std::unique_ptr<Eigen::ConjugateGradient<Eigen::SparseMatrix<double>,
                                                                              Eigen::Lower | Eigen::Upper,
@@ -324,7 +330,7 @@ namespace QEP
                                                                  Eigen::IncompleteLUT<double>>>>(solver_);
 
             if (is_iterative)
-            { // 存在重复代码，可以改进
+            {
                 // 处理迭代求解器：捕获统计信息
                 if (std::holds_alternative<
                         std::unique_ptr<Eigen::ConjugateGradient<Eigen::SparseMatrix<double>,
@@ -445,13 +451,13 @@ namespace QEP
             UnifiedShiftInvertOp op(problem.M, problem.C, problem.K,
                                     sigma, solverType, config);
 
-            Spectra::GenEigsSolver<UnifiedShiftInvertOp> eigs(op, nev, ncv); // 初始化(包括预处理)不单独计时，但是计入总时间
+            Spectra::GenEigsSolver<UnifiedShiftInvertOp> eigs(op, nev, ncv);
             eigs.init();
 
             auto t_iter0 = std::chrono::high_resolution_clock::now();
             int outer_maxIterations = op.config_.outer_maxIterations;
             double outer_tolerance = op.config_.outer_tolerance;
-            eigs.compute(Spectra::SortRule::LargestMagn, outer_maxIterations, outer_tolerance); // Anorldi迭代过程
+            eigs.compute(Spectra::SortRule::LargestMagn, outer_maxIterations, outer_tolerance);
             auto t_iter1 = std::chrono::high_resolution_clock::now();
 
             result.arnoldi_time = std::chrono::duration<double>(t_iter1 - t_iter0).count();
@@ -498,7 +504,7 @@ namespace QEP
             {
                 Eigen::VectorXcd thetas = eigs.eigenvalues();
                 Eigen::MatrixXcd evec_2n = eigs.eigenvectors();
-                int m = static_cast<int>(thetas.size()); // ?static_cast<int>
+                int m = static_cast<int>(thetas.size());
 
                 // 特征值恢复：λ = σ + 1/θ
                 Eigen::VectorXcd lambdas(m);

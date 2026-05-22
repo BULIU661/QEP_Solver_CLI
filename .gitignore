@@ -1,18 +1,38 @@
-# 编译输出文件
+# ========== 编译输出文件 ==========
 *.o
 *.obj
 *.exe
 *.dll
 *.so
 *.a
+*.lib
+*.pdb
+*.ilk
+*.exp
 
-
-# IDE 配置文件 (以 VS Code 为例)
-.vscode/
-
-# 其他常见的
+# ========== 构建目录 ==========
 build/
-Problems/ 
-TestProblems/ 
+build_*/
+cmake-build-*/
 
+# ========== 二进制数据文件 ==========
+*.bin
+
+# ========== 项目输出目录 ==========
+bin/
+lib/
+output/
+Result/
+
+# ========== IDE 配置文件 ==========
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 .DS_Store
+
+# ========== 临时文件 ==========
+Problems/
+TestProblems/
+paper/

@@ -4,8 +4,14 @@
 #include "config/TestCases.h"
 #include <iostream>
 #include <fstream>
+
+#ifdef EIGEN_USE_MKL_ALL
 #include <mkl.h>
+#endif
+
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -24,22 +30,30 @@ static void initEnvironment()
             SetConsoleMode(hConsole, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 #endif
+
+#ifdef _OPENMP
     omp_set_nested(0);
     omp_set_dynamic(0);
     omp_set_num_threads(12);
+#endif
+
+#ifdef EIGEN_USE_MKL_ALL
     mkl_set_num_threads(12);
     mkl_set_dynamic(0);
-    std::cout << "MKL acceleration: "
-#ifdef EIGEN_USE_MKL_ALL
-              << "ENABLED\n";
-#else
-              << "NOT enabled\n";
-#endif
+    std::cout << "MKL acceleration: ENABLED\n";
     char version[1024];
     MKL_Get_Version_String(version, 1024);
     std::cout << "MKL version: " << version << "\n"
-              << "MKL threads: " << mkl_get_max_threads() << "\n"
-              << "OpenMP threads: " << omp_get_max_threads() << "\n";
+              << "MKL threads: " << mkl_get_max_threads() << "\n";
+#else
+    std::cout << "MKL acceleration: NOT enabled (built without MKL)\n";
+#endif
+
+#ifdef _OPENMP
+    std::cout << "OpenMP threads: " << omp_get_max_threads() << "\n";
+#else
+    std::cout << "OpenMP: NOT enabled\n";
+#endif
 }
 
 // 自动转换二进制文件(自动检查目录下是否有缺失的二进制文件，有则转换)
@@ -52,7 +66,7 @@ static void autoConvertBinaryFiles()
     {
         std::ifstream test(pair.second);
         if (!test.good() || Config::OVERWRITE_BINARY)
-        { // 文件不存在或者Config::OVERWRITE_BINARY 为 true，则执行转换
+        {
             std::cout << "转换 " << pair.first << " -> " << pair.second << " ...\n";
             QEP::convertTextCSRtoBinary(pair.first, pair.second);
         }
@@ -83,8 +97,8 @@ int main(int argc, char *argv[])
     {
         allResults.push_back(
             processCase(tc, NEV, SIGMA,
-                        Config::ENABLE_CONDITION_ESTIMATION,
-                        Config::ENABLE_MATRIX_PROPERTY_CHECK));
+                        false,
+                        false));
     }
 
     // 输出报告

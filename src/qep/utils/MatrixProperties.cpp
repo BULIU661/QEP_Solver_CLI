@@ -5,9 +5,12 @@
 #include <iomanip>
 
 #include <Eigen/Sparse>
-#include <Eigen/PardisoSupport>
 #include <Eigen/Cholesky>
 #include <Eigen/SparseLU>
+
+#ifdef EIGEN_PARDISO_SUPPORT
+#include <Eigen/PardisoSupport>
+#endif
 
 namespace QEP
 {
@@ -230,9 +233,37 @@ namespace QEP
         return std::abs(lambda);
     }
 
-    // 逆幂法
+#ifdef EIGEN_PARDISO_SUPPORT
+    // 逆幂法（Pardiso 版）
     double inversePowerMethod(const Eigen::PardisoLU<Eigen::SparseMatrix<double>> &solver,
                               int max_iter, double tol)
+    {
+        int n = solver.rows();
+        Eigen::VectorXd x = Eigen::VectorXd::Random(n);
+        x.normalize();
+        double lambda_old = 0.0, lambda = 0.0;
+        for (int iter = 0; iter < max_iter; ++iter)
+        {
+            Eigen::VectorXd y = solver.solve(x);
+            double norm_y = y.norm();
+            if (norm_y < 1e-14)
+                break;
+            lambda = 1.0 / norm_y;
+            y *= lambda;
+            if (x.dot(y) < 0)
+                lambda = -lambda;
+            if (std::abs(lambda - lambda_old) < tol * std::abs(lambda))
+                break;
+            lambda_old = lambda;
+            x = y;
+        }
+        return std::abs(lambda);
+    }
+#endif
+
+    // 逆幂法（SparseLU 通用版）
+    double inversePowerMethodSparseLU(const Eigen::SparseLU<Eigen::SparseMatrix<double>> &solver,
+                                      int max_iter, double tol)
     {
         int n = solver.rows();
         Eigen::VectorXd x = Eigen::VectorXd::Random(n);
@@ -261,19 +292,46 @@ namespace QEP
         int n = A.rows();
         if (n == 0)
             return -1.0;
-        double lambda_max = powerMethod(A, 100, 1e-6); // 对于估计条件数已经足够了，100次迭代一般可以得到比较好的结果
+        double lambda_max = powerMethod(A, 100, 1e-6);
         if (lambda_max < 1e-14)
             return -1.0;
         if (is_print)
             std::cout << "最大模特征值模数估计：" << std::scientific << std::setprecision(4) << lambda_max << std::defaultfloat << std::endl;
+
+#ifdef EIGEN_PARDISO_SUPPORT
+        // 优先使用 PardisoLU（更快）
         Eigen::PardisoLU<Eigen::SparseMatrix<double>> solver;
         solver.compute(A);
         if (solver.info() != Eigen::Success)
         {
-            std::cerr << "[条件数估计] PardisoLU 分解失败" << std::endl;
-            return -1.0;
+            std::cerr << "[条件数估计] PardisoLU 分解失败，回退到 SparseLU" << std::endl;
+            Eigen::SparseLU<Eigen::SparseMatrix<double>> solver_sl;
+            solver_sl.compute(A);
+            if (solver_sl.info() != Eigen::Success)
+            {
+                std::cerr << "[条件数估计] SparseLU 分解也失败" << std::endl;
+                return -1.0;
+            }
+            double lambda_min = inversePowerMethodSparseLU(solver_sl, 100, 1e-6);
+            if (lambda_min < 1e-14)
+                return 1e15;
+            if (is_print)
+                std::cout << "最小模特征值模数估计：" << std::scientific << std::setprecision(4) << lambda_min << std::defaultfloat << std::endl;
+            return lambda_max / lambda_min;
         }
         double lambda_min = inversePowerMethod(solver, 100, 1e-6);
+#else
+        // 无 MKL：使用 SparseLU
+        Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+        solver.compute(A);
+        if (solver.info() != Eigen::Success)
+        {
+            std::cerr << "[条件数估计] SparseLU 分解失败" << std::endl;
+            return -1.0;
+        }
+        double lambda_min = inversePowerMethodSparseLU(solver, 100, 1e-6);
+#endif
+
         if (lambda_min < 1e-14)
             return 1e15;
         if (is_print)

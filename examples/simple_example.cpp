@@ -40,7 +40,7 @@ int main() {
     K.makeCompressed();
 
     // 构建二次特征值问题
-    EigenSolvers::QuadraticEigenvalueProblem problem;
+    QEP::QuadraticEigenvalueProblem problem;
     problem.M = M;
     problem.C = C;
     problem.K = K;
@@ -55,17 +55,17 @@ int main() {
     double sigma = 0.0;   // 移频点（0表示求模最小特征值）
 
     // 配置求解器
-    EigenSolvers::LinearSolverConfig config;
-    config.type = EigenSolvers::LinearSolverType::SparseLU;
+    QEP::LinearSolverConfig config;
+    config.type = QEP::LinearSolverType::SparseLU;
     config.inner_tolerance = 1e-10;
     config.outer_tolerance = 1e-8;
 
     std::cout << "Solving for " << nev << " eigenvalues near sigma=" << sigma << "...\n\n";
 
     // 求解
-    auto result = EigenSolvers::solveQEP_Unified(
+    auto result = QEP::solveQEP_Unified(
         problem, nev, sigma,
-        EigenSolvers::LinearSolverType::SparseLU, config);
+        QEP::LinearSolverType::SparseLU, config);
 
     // 输出结果
     if (result.success) {
@@ -90,7 +90,7 @@ int main() {
 
         // 计算并显示残差
         if (result.eigenvectors.cols() > 0) {
-            double max_residual = EigenSolvers::printResidualTable(
+            double max_residual = QEP::printResidualTable(
                 problem.M, problem.C, problem.K, result);
             std::cout << "\nMaximum relative residual: " << max_residual << "\n";
         }

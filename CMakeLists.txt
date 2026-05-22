@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 project(
   QEP
   VERSION 1.0.0
@@ -32,9 +32,14 @@ endif()
 option(QEP_USE_MKL "Use Intel MKL for linear algebra" ON)
 option(QEP_USE_AVX2 "Enable AVX2 instruction set" ON)
 option(QEP_USE_OPENMP "Enable OpenMP parallelization" ON)
-option(QEP_BUILD_TEST "Build test executable" ON) # 编译src/test（已完善）
-option(QEP_BUILD_EXAMPLES "Build example programs" OFF) # 编译examples(还未完善)
+option(QEP_BUILD_TEST "Build test executable" ON)
+option(QEP_BUILD_EXAMPLES "Build example programs" OFF)
 option(QEP_INSTALL "Generate installation rules" ON)
+
+# ========== 问题数据文件路径（可自定义，默认相对于构建目录）==========
+set(QEP_PROBLEM_BASE_PATH
+    "../Problems"
+    CACHE PATH "Base path for problem data files")
 
 # ========== 第三方依赖路径（可自定义） ==========
 set(THIRD_PARTY_DIR
@@ -45,7 +50,6 @@ message(STATUS "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
 message(STATUS "third_party path: ${THIRD_PARTY_DIR}")
 
 # ---- Eigen3 ----
-# 默认优先选用QEP内部third_party
 find_path(
   EIGEN_INCLUDE_DIR
   NAMES Eigen/Core
@@ -64,13 +68,11 @@ if(NOT EIGEN_INCLUDE_DIR)
       "Eigen not found. Please install Eigen or set EIGEN_INCLUDE_DIR.")
 endif()
 message(STATUS "Found Eigen : ${EIGEN_INCLUDE_DIR}")
-# 创建接口目标以统一使用
 add_library(Eigen3::Eigen INTERFACE IMPORTED)
 set_target_properties(Eigen3::Eigen PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                                ${EIGEN_INCLUDE_DIR})
 
 # ---- Spectra  ----
-# 默认优先选用QEP内部third_party
 find_path(
   SPECTRA_INCLUDE_DIR
   NAMES Spectra/GenEigsSolver.h
@@ -100,7 +102,6 @@ if(QEP_USE_MKL)
   set(MKL_ROOT
       ""
       CACHE PATH "Intel MKL installation root")
-  # 如果用户未指定，尝试常见路径
   if(NOT MKL_ROOT)
     if(WIN32)
       set(MKL_ROOT "C:/Program Files (x86)/Intel/oneAPI/mkl/latest")
@@ -117,7 +118,6 @@ if(QEP_USE_MKL)
   if(MKL_RT_LIB AND EXISTS "${MKL_INCLUDE_DIR}/mkl.h")
     set(MKL_FOUND TRUE)
     set(MKL_LIBRARIES ${MKL_RT_LIB})
-    # 查找 OpenMP 运行时（MSVC 下需要 libiomp5md）
     if(MSVC)
       find_library(
         IOMP5_LIB
@@ -133,6 +133,9 @@ if(QEP_USE_MKL)
     message(WARNING "MKL not found. Building without MKL acceleration.")
     set(QEP_USE_MKL OFF)
   endif()
+else()
+  set(MKL_FOUND FALSE)
+  message(STATUS "MKL disabled by user.")
 endif()
 
 # ========== 公共编译选项和依赖（接口库） ==========
@@ -143,6 +146,10 @@ target_include_directories(
 
 # 链接 Eigen 和 Spectra
 target_link_libraries(qep_common INTERFACE Eigen3::Eigen Spectra::Spectra)
+
+# 将问题数据文件路径定义为编译宏，供代码中使用
+target_compile_definitions(
+  qep_common INTERFACE QEP_PROBLEM_BASE_PATH="${QEP_PROBLEM_BASE_PATH}")
 
 # 编译选项
 target_compile_options(
@@ -161,19 +168,21 @@ target_compile_options(
 if(QEP_USE_AVX2)
   target_compile_options(
     qep_common INTERFACE $<$<CXX_COMPILER_ID:MSVC>:/arch:AVX2>
-                         $<$<CXX_COMPILER_ID:GNU,Clang>:-march=native>)
+                         $<$<CXX_COMPILER_ID:GNU,Clang>:-mavx2>)
 endif()
 
-if(QEP_USE_OPENMP) #
-  target_compile_options(
-    qep_common INTERFACE $<$<CXX_COMPILER_ID:MSVC>:/openmp>
-                         $<$<CXX_COMPILER_ID:GNU,Clang>:-fopenmp>)
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL
-                                             "Clang")
-    find_package(OpenMP REQUIRED)
-    target_link_libraries(qep_common INTERFACE OpenMP::OpenMP_CXX)
-  elseif(MSVC AND MKL_FOUND)
-    # MSVC 下 OpenMP 由 MKL 的 libiomp5md 提供，已经包含在 MKL_LIBRARIES 中
+if(QEP_USE_OPENMP)
+  if(MSVC)
+    target_compile_options(qep_common INTERFACE /openmp)
+  else()
+    find_package(OpenMP QUIET)
+    if(OpenMP_CXX_FOUND)
+      target_compile_options(qep_common INTERFACE ${OpenMP_CXX_FLAGS})
+      target_link_libraries(qep_common INTERFACE OpenMP::OpenMP_CXX)
+      message(STATUS "OpenMP enabled: ${OpenMP_CXX_FLAGS}")
+    else()
+      message(WARNING "OpenMP not found. Disabling OpenMP.")
+    endif()
   endif()
 endif()
 
@@ -183,6 +192,8 @@ if(MKL_FOUND)
   target_include_directories(qep_common INTERFACE ${MKL_INCLUDE_DIR})
   target_link_libraries(qep_common INTERFACE ${MKL_LIBRARIES})
   message(STATUS "Eigen MKL+PARDISO support enabled (LP64 mode)")
+else()
+  message(STATUS "Eigen MKL+PARDISO support disabled (no MKL)")
 endif()
 
 # ========== 核心库 ==========
@@ -200,7 +211,6 @@ endif()
 if(QEP_INSTALL)
   include(GNUInstallDirs)
 
-  # 安装库
   install(
     TARGETS QEP qep_common
     EXPORT QEPTargets
@@ -210,18 +220,15 @@ if(QEP_INSTALL)
     INCLUDES
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-  # 安装公共头文件
   install(DIRECTORY include/qep include/config
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-  # 导出 CMake 目标
   install(
     EXPORT QEPTargets
     FILE QEPTargets.cmake
     NAMESPACE QEP::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/QEP)
 
-  # 生成并安装 Config 文件
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     ${PROJECT_SOURCE_DIR}/cmake/QEPConfig.cmake.in
