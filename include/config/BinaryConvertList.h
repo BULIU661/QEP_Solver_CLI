@@ -13,12 +13,10 @@ namespace Config
         std::string base = Config::PROBLEM_BASE_PATH;
         return {
             // ========== small_demo (文本->二进制转换) ==========
-            {base + "/small_demo/test/M.txt", base + "/small_demo/test/M.bin"},
-            {base + "/small_demo/test/K.txt", base + "/small_demo/test/K.bin"},
-            {base + "/small_demo/test/C.txt", base + "/small_demo/test/C.bin"},
             {base + "/small_demo/sym_pos_def/M.txt", base + "/small_demo/sym_pos_def/M.bin"},
             {base + "/small_demo/sym_pos_def/K.txt", base + "/small_demo/sym_pos_def/K.bin"},
             {base + "/small_demo/sym_pos_def/C.txt", base + "/small_demo/sym_pos_def/C.bin"},
+
             {base + "/small_demo/sym_semi_pos_def/M.txt", base + "/small_demo/sym_semi_pos_def/M.bin"},
             {base + "/small_demo/sym_semi_pos_def/K.txt", base + "/small_demo/sym_semi_pos_def/K.bin"},
             {base + "/small_demo/sym_semi_pos_def/C.txt", base + "/small_demo/sym_semi_pos_def/C.bin"},
