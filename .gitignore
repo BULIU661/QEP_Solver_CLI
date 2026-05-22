@@ -5,7 +5,6 @@
 *.dll
 *.so
 *.a
-*.lib
 *.pdb
 *.ilk
 *.exp
@@ -24,6 +23,17 @@ lib/
 output/
 Result/
 
+# ========== 问题数据目录（仅保留目录结构，不提交数据文件）==========
+Problem/
+
+# ========== 问题数据（保留目录，忽略大型数据文件）==========
+Problems/*.txt
+Problems/*.png
+Problems/*.vtk
+Problems/**/*.txt
+Problems/**/*.png
+Problems/**/*.vtk
+
 # ========== IDE 配置文件 ==========
 .vscode/
 .idea/
@@ -33,6 +43,7 @@ Result/
 .DS_Store
 
 # ========== 临时文件 ==========
-Problems/
-TestProblems/
 paper/
+.claude/
+
+

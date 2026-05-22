@@ -10,7 +10,28 @@
 #include <iostream>
 #include <Eigen/Sparse>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+static void initConsole()
+{
+#ifdef _WIN32
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hConsole != INVALID_HANDLE_VALUE)
+    {
+        DWORD mode;
+        if (GetConsoleMode(hConsole, &mode))
+            SetConsoleMode(hConsole, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
+#endif
+}
+
 int main() {
+    initConsole();
+
     std::cout << "QEP Library Simple Example\n";
     std::cout << "==========================\n\n";
 
@@ -79,7 +100,7 @@ int main() {
                 result.eigenvalues_real(i),
                 result.eigenvalues_imag(i));
 
-            std::cout << "  λ[" << i + 1 << "] = ";
+            std::cout << "  \xce\xbb[" << i + 1 << "] = ";
             if (std::abs(lambda.imag()) < 1e-10) {
                 std::cout << lambda.real();
             } else {

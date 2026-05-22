@@ -1,9 +1,0 @@
-git add .：将当前目录下所有更改添加到暂存区。
-
-git commit -m "更新说明"：将暂存区的更改提交到本地仓库，并附上说明。
-
-git push：将本地提交推送到远程仓库（GitHub）。
-
-关于用户名和Token：GitHub现在不允许使用密码进行Git操作，需要使用个人访问令牌（Personal Access Token）作为密码。
-用户名就是GitHub用户名。
-Token需要在GitHub设置中生成，用于替代密码。

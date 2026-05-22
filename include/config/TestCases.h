@@ -21,50 +21,38 @@ namespace Config
     {
         std::string base = Config::PROBLEM_BASE_PATH;
 
-        // 额外测试问题目录（可自定义，默认与 PROBLEM_BASE_PATH 同级）
-        std::string extra_base = Config::PROBLEM_BASE_PATH;
-        // 如果以 "Problems" 结尾，尝试查找 "../TestProblems"；否则直接用 base
-        if (extra_base.size() >= 8 && extra_base.substr(extra_base.size() - 8) == "Problems")
-        {
-            extra_base = extra_base.substr(0, extra_base.size() - 8) + "TestProblems";
-        }
-        else
-        {
-            extra_base = "../TestProblems"; // 回退默认
-        }
-
         return {
-            // 用例顺序决定了输出报告的顺序，且输入矩阵顺序要按照结构体中设置的名称顺序,即M,C,K
-            {"100维测试问题，测试移频方法有效性",
-             base + "/problemTest/M.bin", base + "/problemTest/C.bin", base + "/problemTest/K.bin", true},
+            // ========== 小规模演示问题（small_demo）==========
             {"100维对称正定问题",
-             base + "/problemA/M.bin", base + "/problemA/C.bin", base + "/problemA/K.bin", true},
-            {"100维对称半正定问题",
-             base + "/problemB/M.bin", base + "/problemB/C.bin", base + "/problemB/K.bin", true},
+             base + "/small_demo/sym_pos_def/M.bin", base + "/small_demo/sym_pos_def/C.bin", base + "/small_demo/sym_pos_def/K.bin", true},
             {"100维不对称问题",
-             base + "/problemC/M.bin", base + "/problemC/C.bin", base + "/problemC/K.bin", true},
+             base + "/small_demo/unsymmetric/M.bin", base + "/small_demo/unsymmetric/C.bin", base + "/small_demo/unsymmetric/K.bin", true},
             {"100维对称不定问题",
-             base + "/problemD/M.bin", base + "/problemD/C.bin", base + "/problemD/K.bin", true},
-            {"1千维发电机转子问题",
-             base + "/pro1/M.bin", base + "/pro1/C.bin", base + "/pro1/K.bin", true},
-            {"1万维板子问题",
-             base + "/pro2/M.bin", base + "/pro2/C.bin", base + "/pro2/K.bin", true},
+             base + "/small_demo/sym_indefinite/M.bin", base + "/small_demo/sym_indefinite/C.bin", base + "/small_demo/sym_indefinite/K.bin", true},
+            // {"100维对称半正定问题",
+            //  base + "/small_demo/sym_semi_pos_def/M.bin", base + "/small_demo/sym_semi_pos_def/C.bin", base + "/small_demo/sym_semi_pos_def/K.bin", true},
+
+            // ========== 工程实际问题（engineering）==========
+            // {"1千维发电机转子问题",
+            //  base + "/engineering/generator_rotor_1k/M.bin", base + "/engineering/generator_rotor_1k/C.bin", base + "/engineering/generator_rotor_1k/K.bin", true},
+            // {"1万维板子问题",
+            //  base + "/engineering/plate_10k/M.bin", base + "/engineering/plate_10k/C.bin", base + "/engineering/plate_10k/K.bin", true},
             // {"56万维水轮机问题",
-            //  base + "/pro3/M.bin", base + "/pro3/C.bin", base + "/pro3/K.bin", true},
-            {"78万维振动筛问题",
-             base + "/pro4/M.bin", base + "/pro4/C.bin", base + "/pro4/K.bin", true},
-            // {"3维qep1问题",
-            //  "../TestProblems/M1.bin", "../TestProblems/C1.bin", "../TestProblems/K1.bin",true},
-            {"20万维 spring 问题",
-             extra_base + "/M1.bin", extra_base + "/C1.bin", extra_base + "/K1.bin", true},  // 20万维对称正定问题，条件数良好，但是谱分布密集
-            {"1万维 damped_beam 问题",
-             extra_base + "/M2.bin", extra_base + "/C2.bin", extra_base + "/K2.bin", true},  // 1万维对称正定问题,条件数极差，C半正定
-            {"20万维 acoustic_wave_1d 问题",
-             extra_base + "/M3.bin", extra_base + "/C3.bin", extra_base + "/K3.bin", true},  // 20万维非对称QEP问题，M对称不定，C非对称
+            //  base + "/engineering/turbine_560k/M.bin", base + "/engineering/turbine_560k/C.bin", base + "/engineering/turbine_560k/K.bin", true},
+            // {"78万维振动筛问题",
+            //  base + "/engineering/vibrating_screen_780k/M.bin", base + "/engineering/vibrating_screen_780k/C.bin", base + "/engineering/vibrating_screen_780k/K.bin", true},
+
+            // ========== 基准测试问题（benchmark）==========
+            // {"20万维 spring 问题",
+            //  base + "/benchmark/spring_200k/M.bin", base + "/benchmark/spring_200k/C.bin", base + "/benchmark/spring_200k/K.bin", true},
+            // {"1万维 damped_beam 问题",
+            //  base + "/benchmark/damped_beam_10k/M.bin", base + "/benchmark/damped_beam_10k/C.bin", base + "/benchmark/damped_beam_10k/K.bin", true},
+            // {"20万维 acoustic_wave_1d 问题",
+            //  base + "/benchmark/acoustic_wave_200k/M.bin", base + "/benchmark/acoustic_wave_200k/C.bin", base + "/benchmark/acoustic_wave_200k/K.bin", true},
             // {"1万维 wiresaw1 问题（C为稠密矩阵）",
-            //  extra_base + "/M4.bin", extra_base + "/C4.bin", extra_base + "/K4.bin", true},  // 1万维对称正定问题，C非对称
-            // {"5000维 gen_hyper2 问题(满矩阵)",
-            //  extra_base + "/M5.bin", extra_base + "/C5.bin", extra_base + "/K5.bin", false},
+            //  base + "/benchmark/wiresaw1_10k/M.bin", base + "/benchmark/wiresaw1_10k/C.bin", base + "/benchmark/wiresaw1_10k/K.bin", true},
+            // {"基准测试问题1",
+            //  base + "/benchmark/test_prob_1/M.bin", base + "/benchmark/test_prob_1/C.bin", base + "/benchmark/test_prob_1/K.bin", true},
         };
     }
 }
