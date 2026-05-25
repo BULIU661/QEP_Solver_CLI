@@ -1,4 +1,4 @@
-# QEP Solver — 二次特征值问题求解器（CLI 版本）
+# QEP Solver — 二次特征值问题求解器
 
 基于 **Eigen** 和 **Spectra** 的稀疏矩阵二次特征值问题求解器。核心算法为**位移求逆 Arnoldi**，内层线性求解器支持 PardisoLU / SparseLU / SimplicialLLT / CG / BiCGSTAB / GMRES 共 6 种。整个求解过程由 `config.json` 驱动，无需重新编译即可切换问题、调整参数、选择求解器。
 
