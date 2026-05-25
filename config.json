@@ -1,5 +1,5 @@
 {
-    "active_cases": ["test1"],
+    "active_cases": ["test"],
     "binary_conversion": {
         "auto_convert": true,
         "overwrite": false

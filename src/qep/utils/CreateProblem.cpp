@@ -2,7 +2,7 @@
 //  src/qep/utils/CreateProblem.cpp  —  从矩阵文件构造二次特征值问题
 //==============================================================================
 
-#include "CreateProblem.h"
+#include "qep/QEP.h"
 #include "io/MatrixIO.h"
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
