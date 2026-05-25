@@ -323,7 +323,7 @@ int main(int argc, char *argv[])
 
     if (selectedCases.empty())
     {
-        std::cerr << "No problems found in " << std::filesystem::absolute(appCfg.problem_base_path).string()
+        std::cerr << "No problems found in " << cfg.problemBasePath()
                   << "\nPlace M.bin/C.bin/K.bin files in a subdirectory (e.g. Problems/my_problem/).\n"
                   << "Or add a problem.json for metadata. Use --list to see available cases.\n";
         if (!appCfg.active_cases.empty())

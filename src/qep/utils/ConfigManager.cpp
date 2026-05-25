@@ -365,6 +365,10 @@ std::vector<TestCase> ConfigManager::testCases() const
             };
             scanDir(basePath);
         }
+    } catch (const std::filesystem::filesystem_error &e) {
+        std::cerr << "[ConfigManager] Scan error: " << e.what() << "\n";
+    } catch (const std::exception &e) {
+        std::cerr << "[ConfigManager] Scan error: " << e.what() << "\n";
     } catch (...) {}
 
     if (cases.empty())
