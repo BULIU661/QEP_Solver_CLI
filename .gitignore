@@ -1,6 +1,5 @@
 # Build directories
 build/
-bin/
 lib/
 out/
 cmake-build-*/
