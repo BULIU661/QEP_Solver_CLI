@@ -1,0 +1,41 @@
+{
+    "active_cases": ["test1"],
+    "binary_conversion": {
+        "auto_convert": true,
+        "overwrite": false
+    },
+    "logging": {
+        "enable_condition_estimation": false,
+        "enable_matrix_property_check": false,
+        "enable_summary_report": true,
+        "print_eigenvalues": true,
+        "print_residuals": true
+    },
+    "parallel": {
+        "mkl_num_threads": 12,
+        "omp_num_threads": 12
+    },
+    "problem_base_path": "Problems",
+    "solver": {
+        "arnoldi_max_iterations": 1000,
+        "arnoldi_tolerance": 1e-06,
+        "check_tolerance": 1e-06,
+        "default_nev": 10,
+        "default_sigma": 0.0,
+        "enable_adaptive_parameters": false,
+        "enabled_solvers": {
+            "BiCGSTAB": false,
+            "ConjugateGradient": false,
+            "GMRES": false,
+            "PardisoLU": true,
+            "SimplicialLLT": false,
+            "SparseLU": false
+        },
+        "gmres_restart": 30,
+        "ilut_drop_tol": 1e-4,
+        "ilut_fill_factor": 10,
+        "inner_max_iterations": 1000,
+        "inner_tolerance": 1e-08
+    },
+    "test_cases": []
+}
