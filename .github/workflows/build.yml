@@ -1,0 +1,181 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main, master]
+  release:
+    types: [published]
+
+env:
+  ONEAPI_ROOT: 'C:/Program Files (x86)/Intel/oneAPI'
+
+jobs:
+  build-windows-mkl:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Intel oneAPI
+        run: |
+          $ErrorActionPreference = 'SilentlyContinue'
+          if (Test-Path "$env:ONEAPI_ROOT") {
+            Write-Host "Intel oneAPI found"
+            & "$env:ONEAPI_ROOT\setvars.bat" --force
+            Write-Host "##vso[task.setvariable variable=MKL_FOUND]true"
+          } else {
+            Write-Host "Intel oneAPI NOT found, will build without MKL"
+            Write-Host "##vso[task.setvariable variable=MKL_FOUND]false"
+          }
+
+      - name: Configure CMake (MKL)
+        if: env.MKL_FOUND == 'true'
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DQEP_USE_MKL=ON `
+            -DQEP_BUILD_CLI=ON `
+            -DQEP_BUILD_EXAMPLES=OFF
+
+      - name: Configure CMake (Fallback)
+        if: env.MKL_FOUND == 'false'
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DQEP_USE_MKL=OFF `
+            -DQEP_BUILD_CLI=ON `
+            -DQEP_BUILD_EXAMPLES=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: |
+          $exe = Get-ChildItem -Path build -Filter "*.exe" -Recurse | Select-Object -First 1
+          if ($exe) {
+            & $exe.FullName --help 2>&1 | Select-Object -First 5
+          }
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: QEP_Solver-Windows
+          path: |
+            build/**/*.exe
+            build/**/*.dll
+          retention-days: 30
+
+  build-ubuntu-mkl:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - gcc_version: '11'
+            mkl_version: '2024.2'
+          - gcc_version: '12'
+            mkl_version: '2024.2'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: Install Intel MKL
+        run: |
+          wget -qO mkl.sh https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.SHELL
+          chmod +x mkl.sh
+          sudo ./mkl.sh
+          sudo apt-get update
+          sudo apt-get install -y intel-oneapi-mkl-devel/${{ matrix.mkl_version }} || true
+        continue-on-error: true
+
+      - name: Configure CMake
+        run: |
+          export CC=gcc-${{ matrix.gcc_version }}
+          export CXX=g++-${{ matrix.gcc_version }}
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DQEP_USE_MKL=ON \
+            -DQEP_BUILD_CLI=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: QEP_Solver-Linux-MKL-gcc${{ matrix.gcc_version }}
+          path: build/**
+          retention-days: 30
+
+  build-ubuntu-fallback:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gcc_version: ['11', '12']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-${{ matrix.gcc_version }} g++-${{ matrix.gcc_version }}
+
+      - name: Configure CMake
+        run: |
+          export CC=gcc-${{ matrix.gcc_version }}
+          export CXX=g++-${{ matrix.gcc_version }}
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DQEP_USE_MKL=OFF \
+            -DQEP_BUILD_CLI=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: QEP_Solver-Linux-Fallback-gcc${{ matrix.gcc_version }}
+          path: build/**
+          retention-days: 30
+
+  create-release:
+    needs: [build-windows-mkl, build-ubuntu-mkl, build-ubuntu-fallback]
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release Package
+        run: |
+          mkdir -p release
+          find artifacts -type f -name "*.zip" -exec unzip -o {} -d release/ \; 2>/dev/null || true
+          find artifacts -type f -executable -exec cp {} release/ \; 2>/dev/null || true
+          ls -la release/
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/**
+          generate_release_notes: true
