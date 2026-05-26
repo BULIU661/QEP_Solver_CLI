@@ -247,33 +247,6 @@ CLI 命令行（--nev, --sigma, --tol） > 用例级 overrides > solver 全局�
 
 ---
 
-## C++ 编程调用
-
-```cpp
-#include "qep/QEP.h"
-#include "config/ConfigManager.h"
-#include "config/SolverParams.h"
-
-Config::ConfigManager::load("config.json");
-auto solverParams = Config::ConfigManager::instance().toSolverParams();
-
-auto problem = QEP::createTestProblemFromFiles(
-    "my_problem", "M.bin", "C.bin", "K.bin", true, solverParams);
-
-QEP::LinearSolverConfig cfg;
-cfg.inner_tolerance = 1e-8;
-cfg.outer_tolerance = 1e-6;
-
-auto result = QEP::solveQEP_Unified(
-    problem, 10, 0.0,
-    QEP::LinearSolverType::PardisoLU, cfg, solverParams);
-
-for (int i = 0; i < result.eigenvalues_real.size(); ++i)
-    std::cout << result.eigenvalues_real(i) << "\n";
-```
-
----
-
 ## 构建选项
 
 | CMake 选项 | 默认值 | 说明 |
